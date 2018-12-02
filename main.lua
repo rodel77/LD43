@@ -1,5 +1,7 @@
 inspect = require "libs.inspect";
+tween = require "libs.tween";
 local loadAssets = require "src.loader";
+require "src.cards";
 require "src.utils";
 require "src.state.game";
 CScreen = require "libs.cscreen";
@@ -9,15 +11,22 @@ settings = {
 };
 local state = GameState;
 
+mouse_x, mouse_y = 0;
+
 function love.load()
     CScreen.init(1280, 720, true);
 
     loadAssets();
+
+    if state.init then
+        state:init();
+    end
 end
 
 function love.draw()
     CScreen.apply();
 
+    -- color(0xea323c);
     black();
     love.graphics.rectangle("fill", 0, 0, 1280, 720);
 
@@ -36,6 +45,9 @@ function love.update(dt)
     if state.update then
         state:update(dt);
     end
+
+    mouse_x, mouse_y = love.mouse.getPosition();
+    mouse_x, mouse_y = CScreen.project(mouse_x, mouse_y);
 end
 
 function love.keypressed(key)
@@ -45,6 +57,12 @@ function love.keypressed(key)
 
     if state.keypressed then
         state:keypressed(key);
+    end
+end
+
+function love.mousepressed()
+    if state.mousepressed then
+        state:mousepressed();
     end
 end
 
