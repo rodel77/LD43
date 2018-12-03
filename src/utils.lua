@@ -29,3 +29,26 @@ end
 function collide(ox, oy, w, h, x, y)
     return x >= ox and x <= ox+w and y >= oy and y <= oy+h;
 end
+
+function chance50()
+    return math.random(100)>50;
+end
+
+function chance20()
+    return math.random(100)<20;
+end
+
+function deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end

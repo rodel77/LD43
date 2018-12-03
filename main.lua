@@ -4,12 +4,21 @@ local loadAssets = require "src.loader";
 require "src.cards";
 require "src.utils";
 require "src.state.game";
+require "src.state.menu";
 CScreen = require "libs.cscreen";
 
+math.randomseed(os.time());
+
 settings = {
-    hotswap = true;
+    hotswap = true,
+    production = false,
 };
 local state = GameState;
+
+if settings.production then
+    settings.hotswap = false;
+    state = MenuState;
+end
 
 mouse_x, mouse_y = 0;
 

@@ -9,6 +9,22 @@ return function()
         pixel = love.graphics.newImage("assets/pixel.png"),
     };
 
+    sounds = {
+        move = love.audio.newSource("assets/sfx/move.wav", "static"),
+        disenchant = love.audio.newSource("assets/sfx/disenchant.wav", "static"),
+        click = love.audio.newSource("assets/sfx/click.wav", "static"),
+        pick = love.audio.newSource("assets/sfx/pick.wav", "static"),
+        dead = love.audio.newSource("assets/sfx/dead.wav", "static"),
+        upgrade = love.audio.newSource("assets/sfx/upgrade.wav", "static"),
+        player = love.audio.newSource("assets/sfx/player.wav", "static"),
+        buy = love.audio.newSource("assets/sfx/buy.wav", "static"),
+        no = love.audio.newSource("assets/sfx/no.wav", "static"),
+        monster = love.audio.newSource("assets/sfx/monster.wav", "static"),
+        upgrade_finish = love.audio.newSource("assets/sfx/upgrade_finish.wav", "static"),
+        see = love.audio.newSource("assets/sfx/see.ogg", "static"),
+        unsee = love.audio.newSource("assets/sfx/unsee.ogg", "static"),
+    };
+
     quads = {
         -- ulc = love.graphics.newQuad(0, 0, 16, 16, images.atlas:getDimensions()),
         -- us = love.graphics.newQuad(16, 0, 16, 16, images.atlas:getDimensions()),
@@ -99,7 +115,18 @@ return function()
             if i==1 then
                 map_row[#map_row+1] = block;
             else
-                over_row[#over_row+1] = block;
+                if block==14 or block==15 or block==16 then
+                    over_row[#over_row+1] = {
+                        heal = 100,
+                        heald = 100,
+                        name = block==14 and "Depressed Orc" or "Cute Ghost",
+                        id = block,
+                        x = x,
+                        y = y,
+                    };
+                else
+                    over_row[#over_row+1] = block;
+                end
             end
             x = x + 16;
             if x>=map_width*16 then
@@ -115,6 +142,9 @@ return function()
             end
         end
     end
+
+    over_matrix_copy = deepcopy(over_matrix);
+    map_matrix_copy = deepcopy(map_matrix);
 
     print("Assets Loaded");
 end;
