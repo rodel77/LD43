@@ -11,9 +11,9 @@ math.randomseed(os.time());
 
 settings = {
     hotswap = true,
-    production = false,
+    production = true,
 };
-local state = GameState;
+state = MenuState;
 
 if settings.production then
     settings.hotswap = false;
@@ -30,14 +30,21 @@ function love.load()
     if state.init then
         state:init();
     end
+
+
+    music.theme1:play();
 end
 
 function love.draw()
     CScreen.apply();
 
-    -- color(0xea323c);
-    black();
-    love.graphics.rectangle("fill", 0, 0, 1280, 720);
+    if state==GameState then
+        color(0xea323c);
+        love.graphics.rectangle("fill", 0, 0, 1280, 720);
+    else
+        black();
+        love.graphics.rectangle("fill", 0, 0, 1280, 720);
+    end
 
     if state.draw then
         state:draw();
@@ -60,6 +67,14 @@ function love.update(dt)
 end
 
 function love.keypressed(key)
+    if key=="`" and not settings.production then
+        debug.debug();
+    end
+
+    if key=="f12" then
+        love.graphics.captureScreenshot(os.time()..".png")
+    end
+
     if key=="escape" then
         love.event.quit();
     end

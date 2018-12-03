@@ -9,6 +9,8 @@ return function()
         pixel = love.graphics.newImage("assets/pixel.png"),
     };
 
+    sounds_volume = 0; -- This just keeps track of the sounds volume
+
     sounds = {
         move = love.audio.newSource("assets/sfx/move.wav", "static"),
         disenchant = love.audio.newSource("assets/sfx/disenchant.wav", "static"),
@@ -23,7 +25,53 @@ return function()
         upgrade_finish = love.audio.newSource("assets/sfx/upgrade_finish.wav", "static"),
         see = love.audio.newSource("assets/sfx/see.ogg", "static"),
         unsee = love.audio.newSource("assets/sfx/unsee.ogg", "static"),
+
     };
+
+    setmetatable(sounds, {
+        __index = function(this, name)
+            if name=="volume" then
+                return sounds_volume;
+            end
+        end,
+        __newindex = function(this, name, value)
+            if name=="volume" then
+                sounds_volume = value;
+                for i,sound in pairs(this) do
+                    sound:setVolume(value);
+                end
+            end
+        end
+    })
+
+    sounds.volume = .5;
+
+    
+    music = {
+        theme1 = love.audio.newSource("assets/theme1.ogg", "stream"),
+        boss = love.audio.newSource("assets/boss.ogg", "stream"),
+    };
+
+    music.theme1:setLooping(true);
+    music.boss:setLooping(true);
+
+    setmetatable(music, {
+        __index = function(this, name)
+            if name=="volume" then
+                return music_volume;
+            end
+        end,
+        __newindex = function(this, name, value)
+            if name=="volume" then
+                music_volume = value;
+                for i,music in pairs(this) do
+                    music:setVolume(value);
+                end
+            end
+        end
+    })
+
+    music.volume = 0;
 
     quads = {
         -- ulc = love.graphics.newQuad(0, 0, 16, 16, images.atlas:getDimensions()),
@@ -39,6 +87,7 @@ return function()
     fonts = {
         square = love.graphics.newFont("assets/fonts/ChevyRay - Softsquare.ttf", 9),
         skullboy = love.graphics.newFont("assets/fonts/ChevyRay - Skullboy.ttf", 16),
+        lantern = love.graphics.newFont("assets/fonts/ChevyRay - Lantern.ttf", 17),
     };
 
     shaders = {};
@@ -115,11 +164,17 @@ return function()
             if i==1 then
                 map_row[#map_row+1] = block;
             else
-                if block==14 or block==15 or block==16 then
+                if block==14 or block==15 or block==16 or block==28 then
+                    local name = block==14 and "Depressed Orc" or "Cute Ghost";
+
+                    if block==28 then
+                        name = "Schizophrenic Snowman";
+                    end
+
                     over_row[#over_row+1] = {
                         heal = 100,
                         heald = 100,
-                        name = block==14 and "Depressed Orc" or "Cute Ghost",
+                        name = name,
                         id = block,
                         x = x,
                         y = y,

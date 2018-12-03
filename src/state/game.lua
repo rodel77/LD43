@@ -21,8 +21,8 @@ GameState = {
     player_side = 1,
     player_heal = 100,
     player_heald = 100,
-    player_gems = 0,
-    player_dgems = 0,
+    player_gems = 23,
+    player_dgems = 23,
 
     flashlight_force = 4,
     flashlight_tforce = 4,
@@ -32,6 +32,7 @@ GameState = {
     card_open = 0,
 
     upgrade_alpha = 1,
+    upgrade_chance = 50,
     upgrade_tween = nil,
 
     cards_y = 720,
@@ -64,6 +65,16 @@ GameState = {
 
     monster_lose = 0,
 
+    respawn = {},
+
+    select_card = false,
+    on_select_card = nil,
+
+    damage_bonus_count = 0,
+    damage_bonus = 1,
+
+    on_gate = false,
+
     -- player_lock = false,
 };
 
@@ -81,6 +92,7 @@ local FLASHLIGHT_DEF_FORCE = 6;
 
 local TILE_S = 8;
 
+-- They are not really monster ;(
 local function isMonster(monster)
     return type(monster)=="table" and monster.heal;
 end
@@ -89,19 +101,19 @@ function GameState:init()
     for i=1,5 do
         -- self.cards[i] = Cards.diligitis;
     end
-    -- self.cards[1] = Cards.diligitis;
+    self.cards[1] = Cards.occidere;
 end
 
-local CARD_W = 250;
-local CARD_H = 400;
-local CARD_PADDING = 10;
-local CARD_ADDON_S = 10;
-local CARD_GAP = 0;
-local CARD_OUTLINE = 10;
-local MAX_CARDS = 17;
-local MAX_SPACE = CARD_W/4;
-local SAFE_PADDING = 10;
-local MAX_HEAL = 100;
+CARD_W = 250;
+CARD_H = 400;
+CARD_PADDING = 10;
+CARD_ADDON_S = 10;
+CARD_GAP = 0;
+CARD_OUTLINE = 10;
+MAX_CARDS = 17;
+MAX_SPACE = CARD_W/4;
+SAFE_PADDING = 10;
+MAX_HEAL = 100;
 
 local TIER1_GEMS = 20;
 local TIER2_GEMS = 34;
@@ -121,6 +133,8 @@ function GameState:draw()
     math.floor(1280/2 - 8*TILE_S - 16*TILE_S*self.map_x), 
     math.floor(720/2 - 8*TILE_S - 16*TILE_S*self.map_y), 0, TILE_S, TILE_S);
 
+    local draw_count = 0;
+
     for i,row in ipairs(over_matrix) do
         for j,el in ipairs(row) do
             if el~=0 then
@@ -129,31 +143,52 @@ function GameState:draw()
                 local my = math.floor(720/2 - 8*TILE_S - 16*TILE_S*(self.map_y-i+1));
                 local side = 1;
 
-                if isMonster(el) then
-                    monster = true;
+                if mx>0 and mx<1280 and my>0 and my<720 then
+                    if isMonster(el) then
+                        monster = true;
 
-                    if mx>700 then
-                        side = -1;
-                    end
-                    black(0.2);
-                    love.graphics.ellipse("fill", mx + TILE_S*16/2, my + TILE_S*16 - 20, 40, 20);
-                    white();
-                    love.graphics.draw(images.atlas, quads[el.id], 
-                    mx + (side==-1 and 16*TILE_S or 0), 
-                    my, 0, TILE_S*side, TILE_S);
-                    if el.id~=16 then
-                        black();
-                        love.graphics.rectangle("fill", mx + TILE_S*10/2 - 5, my + TILE_S*16 - 5, TILE_S*7 + 10, 10 + 10);
-                        color(1-el.heald/MAX_HEAL, el.heald/MAX_HEAL, 0);
-                        love.graphics.rectangle("fill", mx + TILE_S*10/2, my + TILE_S*16, math.max(0, (el.heald/MAX_HEAL)*(TILE_S*7)), 10);
+                        if mx>700 then
+                            side = -1;
+                        end
+                        
+                        local yOff = 0;
+                        
+                        if el.id==15 then
+                            yOff = math.sin(love.timer.getTime()*4)*4;
+                        end
+                        
+                        
                         black(0.2);
-                        love.graphics.rectangle("fill", mx + TILE_S*10/2, my + TILE_S*16 + 5, math.max(0, (el.heald/MAX_HEAL)*(TILE_S*7)), 5); 
+                        love.graphics.ellipse("fill", mx + TILE_S*16/2, my + TILE_S*16 - 20, 40 - yOff, 20 - yOff);
+                        white();
+                        
+                        
+                        if el.id==28 then
+                            love.graphics.draw(images.atlas, quads[el.id], 
+                            mx + (side==-1 and 16*TILE_S or 0), 
+                            my + TILE_S*16, 0, TILE_S*side, TILE_S*map(math.sin(love.timer.getTime()*5), -1, 1, 1, 1.2), 0, 16);
+                        else
+                            love.graphics.draw(images.atlas, quads[el.id], 
+                            mx + (side==-1 and 16*TILE_S or 0), 
+                            my + yOff, 0, TILE_S*side, TILE_S);
+                        end
+
+                        if el.id~=16 then
+                            black();
+                            love.graphics.rectangle("fill", mx + TILE_S*10/2 - 5, my + TILE_S*16 - 5 + yOff, TILE_S*7 + 10, 10 + 10);
+                            color(1-el.heald/MAX_HEAL, el.heald/MAX_HEAL, 0);
+                            love.graphics.rectangle("fill", mx + TILE_S*10/2, my + TILE_S*16 + yOff, math.max(0, (el.heald/MAX_HEAL)*(TILE_S*7)), 10);
+                            black(0.2);
+                            love.graphics.rectangle("fill", mx + TILE_S*10/2, my + TILE_S*16 + 5 + yOff, math.max(0, (el.heald/MAX_HEAL)*(TILE_S*7)), 5); 
+                        end
+                        draw_count = draw_count + 1;
+                    else
+                        white();
+                        love.graphics.draw(images.atlas, quads[el], 
+                        mx + (side==-1 and 16*TILE_S or 0), 
+                        my, 0, TILE_S*side, TILE_S);
+                        draw_count = draw_count + 1;
                     end
-                else
-                    white();
-                    love.graphics.draw(images.atlas, quads[el], 
-                    mx + (side==-1 and 16*TILE_S or 0), 
-                    my, 0, TILE_S*side, TILE_S);
                 end
             end
         end
@@ -202,6 +237,20 @@ function GameState:draw()
         white();
         love.graphics.setFont(fonts.skullboy);
         love.graphics.printf("'E'\nPick card", player_x, player_y - 30, TILE_S * 16/2, "center", 0, 2, 2);
+    end
+
+    if over_matrix[self.map_ty+1][self.map_tx+1]==6 then
+        white();
+        love.graphics.setFont(fonts.skullboy);
+        love.graphics.printf("'E'\nPick 18 gems", player_x - TILE_S * 16/2, player_y - 40, TILE_S * 16, "center", 0, 2, 2);
+    end
+    
+    self.on_gate = false;
+    if over_matrix[self.map_ty+2][self.map_tx+1]==8 or over_matrix[self.map_ty+1][self.map_tx]==8 then
+        white();
+        love.graphics.setFont(fonts.skullboy);
+        love.graphics.printf("'E'\nSpend 100 gems\nOpen the gate", player_x - TILE_S * 16/2, player_y - 40, TILE_S * 16, "center", 0, 2, 2);
+        self.on_gate = true;
     end
 
     local sy = self.map_ty+1;
@@ -388,6 +437,8 @@ function GameState:draw()
             end
 
             if self.card_s.tier==1 then
+                love.graphics.print("Upgrade (20 Gems):\n50%: Upgrade to tier 2\n50%: Swap to a random tier 1\n\n+ Upgrade (37 Gems):\n100%: Upgrade to tier 2", 150, 50, 0, 2, 2);
+
                 bX = 1280/2-BUTTON_W/2 - 150;
                 bY = 720-80;
                 black();
@@ -411,6 +462,34 @@ function GameState:draw()
                 end
                 
                 if self.player_gems<20 then
+                    black(.5);
+                    love.graphics.rectangle("fill", bX, bY, BUTTON_W, BUTTON_H)
+                end
+
+                -- SUPER UPGRADE
+                bX = 1280/2-BUTTON_W/2 - 150*3;
+                bY = 720-80;
+                black();
+                love.graphics.rectangle("fill", bX-5, bY-5, BUTTON_W+10, BUTTON_H+10)
+                color(0xffc825);
+                love.graphics.rectangle("fill", bX, bY, BUTTON_W, BUTTON_H)
+                color(0xffa214);
+                love.graphics.polygon("fill", {
+                    bX+BUTTON_W, bY,
+                    bX+BUTTON_W, bY+BUTTON_H,
+                    bX, bY+BUTTON_H,
+                });
+                white();
+                love.graphics.print("+ Upgrade", bX + BUTTON_W/2, bY + BUTTON_H/2 - fonts.skullboy:getHeight()*1.5, 0, 4, 4, fonts.skullboy:getWidth("+ Upgrade")/2);
+
+                if self.player_gems>=37 and collide(bX-5, bY-5, BUTTON_W+10, BUTTON_H+10, mouse_x, mouse_y) then
+                    color(0xffeb57, .3);
+                    self.menu_hover = 5;
+                    love.graphics.rectangle("fill", bX, bY, BUTTON_W, BUTTON_H)
+                    white();
+                end
+                
+                if self.player_gems<37 then
                     black(.5);
                     love.graphics.rectangle("fill", bX, bY, BUTTON_W, BUTTON_H)
                 end
@@ -463,6 +542,10 @@ function GameState:draw()
     color(0x00cdf9);
     love.graphics.print("GEMS: "..math.floor(self.player_dgems), 10, 10 + 16*4 + 7, 0, 2, 2);
 
+    if self.select_card then
+        white();
+        love.graphics.printf("Select a card", 0, 720/2, 1280/4, "center", 0, 4, 4, 0, fonts.skullboy:getHeight()*1/2)
+    end
     
     if self.player_heald<=0 then
         color(0x891e2b);
@@ -578,7 +661,7 @@ function GameState:drawCard(x, y, card, focus, bright_mult)
     description = description.."\n\n"..(card.tier==1 and TIER1_GEMS or TIER2_GEMS).." Gems on Disenchant";
 
     if card.tier==1 then
-        description = description.."\n\n20 Gems to Upgrade"
+        -- description = description.."\n\n20 Gems to Upgrade\n\n37 Gems to + Upgrade"
     end
 
     love.graphics.printf(description, safeX, cy, safeW/2, "center", 0, 2, 2);
@@ -644,7 +727,7 @@ function GameState:update(dt)
         sounds.upgrade:play();
         if completed then
             sounds.upgrade_finish:play();
-            self.card_s = chance50() and Cards[self.card_s.ref] or getRandomT1(self.card_s);
+            self.card_s = chance(self.upgrade_chance) and Cards[self.card_s.ref] or getRandomT1(self.card_s);
             self.upgrade_tween = nil;
             self.cards_lock = false;
         end
@@ -681,9 +764,16 @@ function GameState:update(dt)
                     else
                         self.damage_state = "player";
                         
-                        self.player_heal = self.player_heal - 8;
-                        
-                        sounds.player:play();
+                        if chance(30) then
+                            self.player_heal = self.player_heal - 11;
+                            sounds.player:setPitch(.5);
+                            sounds.player:play();
+                        else
+                            self.player_heal = self.player_heal - 8;
+                            sounds.player:setPitch(1);
+                            sounds.player:play();
+                        end
+
                         self.heal_tween = tween.new(.5, GameState, {
                             player_heald = self.player_heal,
                         });
@@ -703,8 +793,31 @@ function GameState:update(dt)
                 if self.player_heal>0 then
                     self.damage_state = 0;
                 else
-                    -- YOU LOSE!
+                    sounds.dead:play();
                 end
+            end
+        end
+    end
+
+    for i,spawn in ipairs(self.respawn) do
+        if love.timer.getTime()-spawn.time>=10 then
+            local x  = spawn.x;
+            local y  = spawn.y;
+            local id = spawn.id;
+
+            if over_matrix[y][x]==0 and not (self.map_tx+1==x and self.map_ty+1==y) then
+                over_matrix[y][x] = {
+                    heal = 100,
+                    heald = 100,
+                    name = id==14 and "Depressed Orc" or "Cute Ghost",
+                    id = id,
+                    x = x,
+                    y = y,
+                };
+                table.remove(self.respawn, i);
+                break;
+            else
+                spawn.time = love.timer.getTime();
             end
         end
     end
@@ -725,23 +838,28 @@ function GameState:playerShake()
 end
 
 function GameState:canWalk(x, y)
-    return map_matrix[y+1][x+1]==10 and not isMonster(over_matrix[y+1][x+1]);
+    return map_matrix[y+1][x+1]==10 and not isMonster(over_matrix[y+1][x+1]) and over_matrix[y+1][x+1]~=8;
 end
 
 function GameState:mousepressed()
     if self.card_hover~=0 then
-        local card = table.remove(self.cards, self.card_hover);
-        self.card_sx = self.hover_x;
-        self.card_sy = self.hover_y;
-        self.card_s = card;
-        self.card_hover = 0;
-        self.cards_lock = true;
-        sounds.see:play();
-        self.cards_tween = tween.new(1, GameState, {
-            cards_y = 720+CARD_W,
-            card_sx = 1280/2,
-            card_sy = 720/2-60,
-        }, "inQuint");
+        if self.select_card then
+            self.on_select_card(self.card_hover);
+            self.select_card = false;
+        else
+            local card = table.remove(self.cards, self.card_hover);
+            self.card_sx = self.hover_x;
+            self.card_sy = self.hover_y;
+            self.card_s = card;
+            self.card_hover = 0;
+            self.cards_lock = true;
+            sounds.see:play();
+            self.cards_tween = tween.new(1, GameState, {
+                cards_y = 720+CARD_W,
+                card_sx = 1280/2,
+                card_sy = 720/2-60,
+            }, "inQuint");
+        end
     end
 
     if self.card_s then
@@ -762,18 +880,27 @@ function GameState:mousepressed()
             sounds.disenchant:play();
         elseif self.menu_hover==3 then
             self.upgrade_alpha = 1;
+            self.upgrade_chance = 50;
             self:setGems(self.player_gems - 20);
             self.upgrade_tween = tween.new(2, GameState, {
                 upgrade_alpha = 2,
             }, "outQuint");
         elseif self.menu_hover==4 then
-            self.card_s:use();
-            self.card_s = nil;
-            self.cards_lock = false;
+            if self.card_s:use() then
+                self.card_s = nil;
+                self.cards_lock = false;
+                self.upgrade_alpha = 1;
+                sounds.unsee:play();
+                self.cards_tween = tween.new(.3, GameState, {
+                    cards_y = 720,
+                }, "outQuint");
+            end
+        elseif self.menu_hover==5 then
+            self.upgrade_chance = 100;
             self.upgrade_alpha = 1;
-            sounds.unsee:play();
-            self.cards_tween = tween.new(.3, GameState, {
-                cards_y = 720,
+            self:setGems(self.player_gems - 37);
+            self.upgrade_tween = tween.new(2, GameState, {
+                upgrade_alpha = 2,
             }, "outQuint");
         end
 
@@ -804,10 +931,30 @@ function GameState:keypressed(key)
     end
 
     if key=="e" then
-        if over_matrix[self.map_ty+1][self.map_tx+1]==4 then
+        if self.on_gate then
+            if self.player_gems>=130 then
+                music.theme1:stop();
+                music.boss:play();
+                sounds.disenchant:play();
+                self:setGems(self.player_gems-130);
+                for i,row in ipairs(over_matrix) do
+                    for j,cell in ipairs(row) do
+                        if cell==8 then
+                            over_matrix[i][j] = 0;
+                        end
+                    end
+                end
+            else
+                sounds.no:play();
+            end
+        elseif over_matrix[self.map_ty+1][self.map_tx+1]==4 then
             over_matrix[self.map_ty+1][self.map_tx+1] = 0;
             table.insert(self.cards, self:randomCard());
             self:lastFeedback();
+            sounds.pick:play();
+        elseif over_matrix[self.map_ty+1][self.map_tx+1]==6 then
+            self:setGems(self.player_gems+18);
+            over_matrix[self.map_ty+1][self.map_tx+1] = 0;
             sounds.pick:play();
         elseif self.adjacent_monster then
             if self.adjacent_monster.id==16 then
@@ -821,12 +968,31 @@ function GameState:keypressed(key)
                 end
             else
                 sounds.monster:play();
-                self.adjacent_monster.heal = self.adjacent_monster.heal - 15;
+
+                local dmg = 15;
+
+                if self.adjacent_monster.id==28 then
+                    dmg = 5;
+                end
+
+                if self.damage_bonus_count>0 then
+                    self.damage_bonus_count = self.damage_bonus_count -1;
+
+                    dmg = dmg * self.damage_bonus;
+                end
+
+                self.adjacent_monster.heal = self.adjacent_monster.heal - dmg;
 
                 if self.adjacent_monster.heal<=0 then
                     sounds.dead:play();
                     over_matrix[self.monster_y][self.monster_x] = 4;
                     self.monster_lose = 0;
+                    table.insert(self.respawn, {
+                        id = self.adjacent_monster.id,
+                        x = self.monster_x,
+                        y = self.monster_y,
+                        time = love.timer.getTime(),
+                    });
                 else
                     self.damage_state = "monster";
                     self.damage_tween = tween.new(.3, self.adjacent_monster, {

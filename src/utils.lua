@@ -38,6 +38,10 @@ function chance20()
     return math.random(100)<20;
 end
 
+function chance(number)
+    return math.random(100)<number;
+end
+
 function deepcopy(orig)
     local orig_type = type(orig)
     local copy
